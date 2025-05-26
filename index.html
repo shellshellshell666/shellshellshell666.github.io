@@ -2,181 +2,94 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>諏訪園百貨店 | オンライン総合ショッピング</title>
+  <title>諏訪園百貨店 | 暮らしを豊かにする厳選ガイド</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-
-  <!-- AdSenseコード -->
+  <!-- Meta タグ（AdSense アカウントの紐付け） -->
+  <meta name="google-adsense-account" content="ca-pub-4786033843564240">
+  <!-- AdSense 自動広告 -->
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4786033843564240"
      crossorigin="anonymous"></script>
-
   <style>
-    body {
-      margin: 0;
-      font-family: "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
-      background-color: #f5f5f5;
-      color: #333;
-    }
-    header {
-      background-color: #14356a;
-      color: white;
-      padding: 20px;
-      text-align: center;
-    }
-    header h1 {
-      margin: 0 0 5px;
-      font-size: 2rem;
-    }
-    header p {
-      margin: 0 0 10px;
-      font-size: 1rem;
-    }
-    .hero {
-      width: 100%;
-      height: 200px;
-      background-color: #14356a;
-    }
-    .container {
-      padding: 20px 20px 40px;
-    }
-    .group {
-      margin-bottom: 30px;
-    }
-    .group h2 {
-      font-size: 1.4rem;
-      border-left: 6px solid #14356a;
-      padding-left: 10px;
-      margin: 10px 0;
-    }
-    .category-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-    }
-    .category {
-      background-color: white;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      padding: 10px 15px;
-      font-size: 0.95rem;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-    }
-    footer {
-      background-color: #eee;
-      padding: 15px;
-      text-align: center;
-      font-size: 0.9rem;
-    }
+    body { margin:0; font-family: "Hiragino Kaku Gothic ProN", Meiryo, sans-serif; background:#fafafa; color:#333; line-height:1.6; }
+    header { background:#14356a; color:#fff; padding:20px; text-align:center; }
+    header h1 { margin:0 0 .5em; font-size:2.2rem; }
+    header nav a { color:#fff; margin:0 1em; text-decoration:none; font-weight:bold; }
+    .lead { max-width:800px; margin:1.5em auto; padding:0 1em; font-size:1rem; }
+    .lead strong { color:#14356a; }
+    section { max-width:1000px; margin:2em auto; padding:0 1em; background:#fff; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.05); }
+    section h2 { font-size:1.5rem; margin:1em 0 .5em; border-left:4px solid #14356a; padding-left:.5em; }
+    section p { margin:.8em 0; }
+    .categories { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; margin-bottom:2em; }
+    .categories div { padding:8px; background:#f0f4f8; border-radius:4px; text-align:center; }
+    footer { text-align:center; font-size:.85rem; color:#666; padding:2em 1em; }
+    @media(max-width:600px){ header h1{font-size:1.8rem;} }
   </style>
 </head>
+
 <body>
+  <header>
+    <h1>諏訪園百貨店</h1>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="about.html">About</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+  </header>
 
-<header>
-  <h1>諏訪園百貨店</h1>
-  <p>あらゆるジャンルを網羅する総合オンラインストア</p>
-</header>
+  <p class="lead">
+    <strong>諏訪園百貨店</strong>は、「あなたの日常を、もっと豊かに、もっと楽しく。」をテーマに、
+    家電から書籍、グルメ、ホビーまで、<strong>実際に使って良かった</strong>アイテムだけを厳選したオンライン総合ガイドです。  
+    情報を一点に集約し、ユーザーが迷わず最適な商品に辿り着けるよう工夫しています。
+  </p>
 
-<div class="hero"></div>
+  <section>
+    <h2>当店の特徴</h2>
+    <p>・<strong>実体験レビュー</strong>：スタッフが実際に試して分かったメリット・デメリットを正直にお届け。</p>
+    <p>・<strong>専門性の高いカテゴリー</strong>：家電、書籍、グルメ、ホビーなど、各分野のプロがセレクト。</p>
+    <p>・<strong>わかりやすいナビゲーション</strong>：トップページ一つで全ジャンルへスムーズにアクセス。</p>
+  </section>
 
-<div class="container">
-
-  <div class="group">
-    <h2>家電・デジタル・ソフトウェア</h2>
-    <div class="category-list">
-      <div class="category">Amazonデバイス&amp;アクセサリ</div>
-      <div class="category">Amazon整備済み品</div>
-      <div class="category">PCソフト</div>
-      <div class="category">家電&amp;カメラ</div>
-      <div class="category">大型家電</div>
-      <div class="category">パソコン・周辺機器</div>
+  <section>
+    <h2>カテゴリ一覧</h2>
+    <div class="categories">
+      <div>家電・デジタル・ソフト</div>
+      <div>書籍・メディア</div>
+      <div>生活・日用品・DIY</div>
+      <div>美容・健康・グルメ</div>
+      <div>趣味・子育て・ライフ</div>
+      <div>ファッション・ギフト</div>
+      <div>学び・仕事・旅行</div>
+      <div>金融・不動産・ネット</div>
     </div>
-  </div>
+  </section>
 
-  <div class="group">
-    <h2>書籍・メディア・コンテンツ</h2>
-    <div class="category-list">
-      <div class="category">本</div>
-      <div class="category">洋書</div>
-      <div class="category">Kindleストア</div>
-      <div class="category">Prime Video</div>
-      <div class="category">DVD</div>
-      <div class="category">ミュージック</div>
-      <div class="category">デジタルミュージック</div>
-    </div>
-  </div>
+  <section>
+    <h2>最新レビュー</h2>
+    <p><strong>✅ 高画質プロジェクター 2025年モデル</strong><br>
+       明るい昼間のリビングでもクッキリ映像。使い勝手や音質を徹底検証。</p>
+    <p><strong>✅ ベストセラー小説『夜明けの図書館』</strong><br>
+       静謐な筆致と深いテーマ。書籍版とオーディオ版を比較した感想を掲載。</p>
+    <p><strong>✅ 最新スマート空気清浄機 X200</strong><br>
+       アプリ連携で手軽に管理。静音性能とフィルター寿命をレビュー。</p>
+  </section>
 
-  <div class="group">
-    <h2>生活・日用品・住まい</h2>
-    <div class="category-list">
-      <div class="category">ホーム&amp;キッチン</div>
-      <div class="category">文房具・オフィス用品</div>
-      <div class="category">DIY・工具・ガーデン</div>
-      <div class="category">産業・研究開発用品</div>
-    </div>
-  </div>
+  <section>
+    <h2>ご利用ガイド</h2>
+    <p>1. カテゴリを選ぶ → 2. レビュー記事を読む → 3. 購入リンクで詳細をチェック</p>
+    <p>迷ったら、まず最新レビューコーナーを要チェック！</p>
+  </section>
 
-  <div class="group">
-    <h2>美容・健康・食品</h2>
-    <div class="category-list">
-      <div class="category">ビューティー</div>
-      <div class="category">ドラッグストア</div>
-      <div class="category">食品・飲料・お酒</div>
-      <div class="category">健康</div>
-      <div class="category">美容</div>
-      <div class="category">グルメ・食品</div>
-    </div>
-  </div>
+  <footer>
+    &copy; 2025 諏訪園百貨店 — Suwaen Department Store. All rights reserved.
+  </footer>
 
-  <div class="group">
-    <h2>趣味・子育て・ライフスタイル</h2>
-    <div class="category-list">
-      <div class="category">ホビー</div>
-      <div class="category">楽器・音響機器</div>
-      <div class="category">ベビー&amp;マタニティ</div>
-      <div class="category">ペット用品</div>
-      <div class="category">おもちゃ</div>
-      <div class="category">スポーツ&amp;アウトドア</div>
-      <div class="category">スポーツ・趣味</div>
-      <div class="category">結婚・恋愛</div>
-    </div>
-  </div>
+  <!--
+    【ads.txt】
+    下記内容をサイトルートの「ads.txt」に配置してください。
 
-  <div class="group">
-    <h2>ファッション・贈り物</h2>
-    <div class="category-list">
-      <div class="category">ファッション</div>
-      <div class="category">ギフトカード</div>
-      <div class="category">ギフト</div>
-    </div>
-  </div>
-
-  <div class="group">
-    <h2>学び・仕事・暮らし</h2>
-    <div class="category-list">
-      <div class="category">仕事情報</div>
-      <div class="category">学び・資格</div>
-      <div class="category">暮らし</div>
-    </div>
-  </div>
-
-  <div class="group">
-    <h2>金融・不動産・ネット</h2>
-    <div class="category-list">
-      <div class="category">車&amp;バイク</div>
-      <div class="category">不動産・引越</div>
-      <div class="category">金融・投資・保険</div>
-      <div class="category">Webサービス</div>
-      <div class="category">インターネット接続</div>
-      <div class="category">エンタメ</div>
-      <div class="category">アプリ&amp;ゲーム</div>
-      <div class="category">ゲーム</div>
-    </div>
-  </div>
-
-</div>
-
-<footer>
-  &copy; 2025 諏訪園百貨店 &#8211; Suwaen Department Store
-</footer>
+    google.com, pub-4786033843564240, DIRECT, f08c47fec0942fa0
+  -->
 
 </body>
 </html>
