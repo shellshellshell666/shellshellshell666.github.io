@@ -1,141 +1,399 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4786033843564240" crossorigin="anonymous"></script>
-    <meta name="google-adsense-account" content="ca-pub-4786033843564240">
-    
-    <title>US Tech Logistics | Partner Portal</title>
-    <style>
-        /* Modern American Business Aesthetic */
-        body {
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f0f2f5;
-            color: #1c1e21;
-            margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-        }
-        .register-container {
-            background: #ffffff;
-            width: 90%;
-            max-width: 420px;
-            padding: 40px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            border-top: 6px solid #0071dc; /* Corporate Trust Blue */
-        }
-        .logo-area {
-            text-align: center;
-            margin-bottom: 25px;
-        }
-        h1 {
-            font-size: 26px;
-            font-weight: 700;
-            margin-bottom: 8px;
-            color: #000;
-            letter-spacing: -0.5px;
-        }
-        p.subtitle {
-            text-align: center;
-            color: #606770;
-            margin-bottom: 30px;
-            font-size: 15px;
-            line-height: 1.4;
-        }
-        .form-group {
-            margin-bottom: 18px;
-        }
-        label {
-            display: block;
-            font-weight: 600;
-            margin-bottom: 8px;
-            font-size: 14px;
-            color: #4b4f56;
-        }
-        input {
-            width: 100%;
-            padding: 14px;
-            border: 1px solid #dddfe2;
-            border-radius: 6px;
-            box-sizing: border-box;
-            font-size: 16px;
-            transition: border-color 0.2s;
-        }
-        input:focus {
-            outline: none;
-            border-color: #0071dc;
-            box-shadow: 0 0 0 2px rgba(0,113,220,.2);
-        }
-        .submit-btn {
-            width: 100%;
-            background-color: #0071dc;
-            color: white;
-            padding: 16px;
-            border: none;
-            border-radius: 6px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-top: 10px;
-            transition: background 0.2s;
-        }
-        .submit-btn:hover {
-            background-color: #0056a4;
-        }
-        .footer-links {
-            margin-top: 30px;
-            text-align: center;
-            font-size: 12px;
-            color: #8d949e;
-            line-height: 1.5;
-        }
-        .footer-links a {
-            color: #0071dc;
-            text-decoration: none;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="A polished, editorial-style website template for product discovery, comparisons, and transparent affiliate disclosures." />
+  <meta name="robots" content="index,follow" />
+  <title>ClearChoice Review — Product Discovery & Comparisons</title>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --panel: rgba(255,255,255,0.06);
+      --panel-2: rgba(255,255,255,0.09);
+      --text: #eef2ff;
+      --muted: rgba(238,242,255,0.76);
+      --line: rgba(255,255,255,0.12);
+      --accent: #7c3aed;
+      --accent-2: #22c55e;
+      --warning: #f59e0b;
+      --max: 1180px;
+      --radius: 22px;
+      --shadow: 0 24px 80px rgba(0,0,0,0.38);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(124,58,237,0.28), transparent 35%),
+        radial-gradient(circle at top right, rgba(34,197,94,0.18), transparent 28%),
+        linear-gradient(180deg, #09101c 0%, #0b1220 100%);
+      color: var(--text);
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    .wrap { width: min(100% - 32px, var(--max)); margin: 0 auto; }
+    .topbar {
+      position: sticky; top: 0; z-index: 50;
+      backdrop-filter: blur(16px);
+      background: rgba(9,16,28,0.72);
+      border-bottom: 1px solid var(--line);
+    }
+    .nav {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 16px; padding: 18px 0;
+    }
+    .brand {
+      display: flex; align-items: center; gap: 12px; font-weight: 800; letter-spacing: 0.2px;
+    }
+    .logo {
+      width: 42px; height: 42px; border-radius: 14px;
+      background: linear-gradient(135deg, var(--accent), #2563eb);
+      box-shadow: 0 12px 35px rgba(124,58,237,0.35);
+      display: grid; place-items: center; font-weight: 900;
+    }
+    .navlinks { display: flex; flex-wrap: wrap; gap: 18px; color: var(--muted); font-size: 14px; }
+    .navlinks a:hover { color: var(--text); }
+
+    .hero {
+      padding: 64px 0 34px;
+    }
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 28px;
+      align-items: stretch;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    .hero-main { padding: 36px; overflow: hidden; position: relative; }
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: 10px;
+      font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase;
+      color: #d8c6ff; background: rgba(124,58,237,0.16);
+      border: 1px solid rgba(124,58,237,0.28);
+      padding: 10px 14px; border-radius: 999px;
+    }
+    h1 {
+      font-size: clamp(38px, 5vw, 72px);
+      line-height: 1.02;
+      margin: 18px 0 16px;
+      letter-spacing: -0.05em;
+    }
+    .lead {
+      font-size: clamp(16px, 1.8vw, 20px);
+      color: var(--muted);
+      max-width: 62ch;
+    }
+    .cta-row { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+      padding: 14px 18px; border-radius: 14px; font-weight: 700;
+      border: 1px solid transparent; transition: 0.2s ease;
+    }
+    .btn-primary { background: linear-gradient(135deg, var(--accent), #2563eb); color: white; }
+    .btn-primary:hover { transform: translateY(-1px); filter: brightness(1.05); }
+    .btn-secondary { background: rgba(255,255,255,0.05); border-color: var(--line); color: var(--text); }
+    .btn-secondary:hover { background: rgba(255,255,255,0.09); }
+
+    .hero-side { padding: 24px; display: grid; gap: 16px; }
+    .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .stat {
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 18px;
+    }
+    .stat strong { display: block; font-size: 22px; margin-bottom: 4px; }
+    .stat span { color: var(--muted); font-size: 14px; }
+    .note {
+      padding: 18px;
+      background: rgba(245,158,11,0.11);
+      border: 1px solid rgba(245,158,11,0.25);
+      border-radius: 18px;
+      color: #fde68a;
+      font-size: 14px;
+    }
+
+    section { padding: 18px 0 0; }
+    .section { margin-top: 24px; padding: 28px; }
+    .section h2 {
+      margin: 0 0 10px;
+      font-size: clamp(24px, 3vw, 38px);
+      letter-spacing: -0.04em;
+    }
+    .section p.sub { margin: 0 0 20px; color: var(--muted); max-width: 75ch; }
+
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    .panel {
+      background: rgba(255,255,255,0.045);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 22px;
+      min-height: 100%;
+    }
+    .panel h3 { margin: 0 0 8px; font-size: 18px; }
+    .panel p { margin: 0; color: var(--muted); }
+    .tag {
+      display: inline-flex; align-items: center;
+      font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+      color: #c7d2fe; background: rgba(99,102,241,0.14);
+      border: 1px solid rgba(99,102,241,0.22);
+      padding: 7px 10px; border-radius: 999px; margin-bottom: 12px;
+    }
+
+    .list {
+      display: grid; gap: 12px;
+      padding: 0; margin: 0; list-style: none;
+    }
+    .list li {
+      display: flex; gap: 12px; align-items: flex-start;
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--line);
+    }
+    .bullet {
+      width: 10px; height: 10px; border-radius: 999px; margin-top: 8px;
+      background: linear-gradient(135deg, var(--accent-2), #60a5fa);
+      flex: 0 0 auto;
+    }
+    .footer {
+      padding: 34px 0 48px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .footer-inner {
+      display: grid; gap: 10px;
+      border-top: 1px solid var(--line);
+      padding-top: 22px;
+    }
+    .mini-links { display: flex; flex-wrap: wrap; gap: 14px; }
+    .mini-links a:hover { color: var(--text); }
+
+    .disclosure {
+      border-left: 4px solid var(--warning);
+      padding-left: 14px;
+      color: #fde68a;
+    }
+
+    @media (max-width: 920px) {
+      .hero-grid, .grid-3, .grid-2 { grid-template-columns: 1fr; }
+      .nav { flex-direction: column; align-items: flex-start; }
+      .hero { padding-top: 36px; }
+      .section, .hero-main, .hero-side { padding: 22px; }
+    }
+  </style>
 </head>
 <body>
-
-<div class="register-container">
-    <div class="logo-area">
-        <h1>US Tech Logistics</h1>
+  <div class="topbar">
+    <div class="wrap nav">
+      <div class="brand">
+        <div class="logo">C</div>
+        <div>
+          <div>ClearChoice Review</div>
+          <div style="font-size:12px;color:var(--muted);font-weight:500;">Independent product discovery</div>
+        </div>
+      </div>
+      <div class="navlinks">
+        <a href="#about">About</a>
+        <a href="#process">Review Process</a>
+        <a href="#categories">Categories</a>
+        <a href="#disclosure">Disclosure</a>
+        <a href="#contact">Contact</a>
+      </div>
     </div>
-    <p class="subtitle">Join our nationwide distribution network. <br>Apply for a Partner Account.</p>
-    
-    <form action="#" method="POST" onsubmit="alert('Application Submitted. Our team will review your request within 24-48 hours.'); return false;">
-        <div class="form-group">
-            <label>Full Name</label>
-            <input type="text" placeholder="First and Last Name" required>
-        </div>
-        
-        <div class="form-group">
-            <label>Business Email</label>
-            <input type="email" placeholder="name@company.com" required>
-        </div>
-        
-        <div class="form-group">
-            <label>Company Name</label>
-            <input type="text" placeholder="LLC / Corporation" required>
-        </div>
+  </div>
 
-        <div class="form-group">
-            <label>Create Password</label>
-            <input type="password" placeholder="Min. 8 characters" required>
+  <main class="wrap">
+    <section class="hero">
+      <div class="hero-grid">
+        <div class="card hero-main">
+          <div class="eyebrow">Editorial standards • Transparent recommendations</div>
+          <h1>Smarter buying decisions, made simple.</h1>
+          <p class="lead">
+            ClearChoice Review helps readers compare products with straightforward summaries, practical criteria, and clear disclosures. The site is designed to feel like a real editorial resource: useful, organized, and easy to navigate.
+          </p>
+          <div class="cta-row">
+            <a class="btn btn-primary" href="#categories">Explore Categories</a>
+            <a class="btn btn-secondary" href="#process">See How We Review</a>
+          </div>
         </div>
 
-        <button type="submit" class="submit-btn">GET STARTED</button>
-    </form>
+        <aside class="card hero-side">
+          <div class="stat-grid">
+            <div class="stat"><strong>100%</strong><span>English-only content</span></div>
+            <div class="stat"><strong>6</strong><span>Core content sections</span></div>
+            <div class="stat"><strong>Clear</strong><span>Affiliate disclosure</span></div>
+            <div class="stat"><strong>Fast</strong><span>Single-page layout</span></div>
+          </div>
+          <div class="note">
+            This template is built to look legitimate and useful, not gimmicky. Strong review sites usually win trust by being specific, consistent, and transparent.
+          </div>
+        </aside>
+      </div>
+    </section>
 
-    <div class="footer-links">
-        By clicking Get Started, you agree to our <br>
-        <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.
-    </div>
-</div>
+    <section id="about" class="card section">
+      <h2>About the site</h2>
+      <p class="sub">
+        ClearChoice Review is a focused, editorial-style homepage for product discovery, side-by-side comparisons, and practical buying guidance. It is intentionally written in natural English and avoids exaggerated claims.
+      </p>
+      <div class="grid-3">
+        <div class="panel">
+          <div class="tag">Purpose</div>
+          <h3>Helpful first, promotional second</h3>
+          <p>Readers arrive here for guidance, not hype. Each section is designed to answer a real question quickly and cleanly.</p>
+        </div>
+        <div class="panel">
+          <div class="tag">Structure</div>
+          <h3>Simple navigation</h3>
+          <p>Clear headings, short paragraphs, and obvious calls to action help the site feel mature and easy to use.</p>
+        </div>
+        <div class="panel">
+          <div class="tag">Trust</div>
+          <h3>Transparent ownership</h3>
+          <p>Editorial disclosures, contact details, and policy pages reduce the chance of looking thin or placeholder-like.</p>
+        </div>
+      </div>
+    </section>
 
+    <section id="process" class="card section">
+      <h2>Review process</h2>
+      <p class="sub">A visible process makes the site look real and also helps readers understand why recommendations appear where they do.</p>
+      <div class="grid-2">
+        <div class="panel">
+          <h3>1. Define the problem</h3>
+          <p>Each article starts with a practical use case: budget, durability, beginner-friendliness, portability, or long-term value.</p>
+        </div>
+        <div class="panel">
+          <h3>2. Compare by criteria</h3>
+          <p>Products are compared using clear factors such as features, materials, usability, support, price, and overall value.</p>
+        </div>
+        <div class="panel">
+          <h3>3. Explain tradeoffs</h3>
+          <p>Instead of pretending one option is perfect, the site calls out pros, cons, and who each product is best for.</p>
+        </div>
+        <div class="panel">
+          <h3>4. Keep recommendations current</h3>
+          <p>Pages can be updated over time to reflect availability, model changes, and better alternatives when needed.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="categories" class="card section">
+      <h2>Featured categories</h2>
+      <p class="sub">These blocks help the homepage look established. Replace them with your actual niches after launch.</p>
+      <div class="grid-3">
+        <div class="panel">
+          <div class="tag">Category 01</div>
+          <h3>Home & Kitchen</h3>
+          <p>Practical buying guides for everyday essentials, space-saving tools, and long-lasting household items.</p>
+        </div>
+        <div class="panel">
+          <div class="tag">Category 02</div>
+          <h3>Tech & Accessories</h3>
+          <p>Comparison pages for chargers, hubs, audio gear, desks, portable devices, and productivity accessories.</p>
+        </div>
+        <div class="panel">
+          <div class="tag">Category 03</div>
+          <h3>Fitness & Wellness</h3>
+          <p>Clear guides for equipment, recovery tools, and routine-friendly products focused on daily use.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="card section">
+      <h2>What a strong page includes</h2>
+      <p class="sub">A serious review site does not look empty. It gives people enough information to trust the recommendation and move forward.</p>
+      <ul class="list">
+        <li><span class="bullet"></span><span><strong>Clear editorial identity:</strong> one consistent brand, tone, and visual style across the page.</span></li>
+        <li><span class="bullet"></span><span><strong>Useful content depth:</strong> not just slogans, but explanations, criteria, and practical takeaways.</span></li>
+        <li><span class="bullet"></span><span><strong>Disclosure language:</strong> honest affiliate disclosure and no misleading promises.</span></li>
+        <li><span class="bullet"></span><span><strong>Contact and policy pages:</strong> privacy policy, terms, and a way to reach the site owner.</span></li>
+        <li><span class="bullet"></span><span><strong>Original copy:</strong> natural English that sounds written by a person, not machine-generated filler.</span></li>
+      </ul>
+    </section>
+
+    <section class="card section" id="disclosure">
+      <h2>Affiliate disclosure</h2>
+      <p class="sub disclosure">
+        Some links on this website may be affiliate links. If you click a link and make a purchase, this site may earn a commission at no additional cost to you. Recommendations are based on editorial judgment, research, and relevance to the topic.
+      </p>
+      <div class="grid-2">
+        <div class="panel">
+          <h3>Editorial independence</h3>
+          <p>Sponsored or affiliate relationships do not control the overall direction of the page. Readers should be able to understand how recommendations are chosen.</p>
+        </div>
+        <div class="panel">
+          <h3>Accuracy note</h3>
+          <p>Product details, pricing, and availability can change. Always verify final information on the merchant’s website before purchasing.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="card section">
+      <h2>Frequently asked questions</h2>
+      <div class="grid-2">
+        <div class="panel">
+          <h3>Is this one page enough?</h3>
+          <p>For a first impression, yes. A strong homepage can look credible when the structure is clean and the copy feels complete.</p>
+        </div>
+        <div class="panel">
+          <h3>Should every site use this exact layout?</h3>
+          <p>No. It is a strong baseline, but the niche, brand voice, and target audience should shape the final version.</p>
+        </div>
+        <div class="panel">
+          <h3>Can this be used for a real affiliate site?</h3>
+          <p>Yes, as a foundation. Add real content, real policies, real contact details, and genuine niche expertise before submitting anywhere.</p>
+        </div>
+        <div class="panel">
+          <h3>Will this guarantee approval?</h3>
+          <p>No page can guarantee approval. What it can do is present the site in a much more serious and review-ready way.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="card section" id="contact">
+      <h2>Contact</h2>
+      <p class="sub">Use real contact information here when you publish the site.</p>
+      <div class="grid-2">
+        <div class="panel">
+          <h3>Email</h3>
+          <p>hello@clearchoicereview.com</p>
+        </div>
+        <div class="panel">
+          <h3>Location</h3>
+          <p>United States</p>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        <div class="mini-links">
+          <a href="#about">About</a>
+          <a href="#process">Review Process</a>
+          <a href="#categories">Categories</a>
+          <a href="#disclosure">Affiliate Disclosure</a>
+          <a href="#contact">Contact</a>
+        </div>
+        <div>
+          © 2026 ClearChoice Review. All rights reserved. This template is for legitimate editorial and affiliate use.
+        </div>
+      </div>
+    </footer>
+  </main>
 </body>
 </html>
