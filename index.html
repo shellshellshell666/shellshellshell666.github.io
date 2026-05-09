@@ -1,640 +1,621 @@
-# -*- coding: utf-8 -*-
-from __future__ import annotations
-
-import html
-import hashlib
-import json
-import os
-import re
-import shutil
-import subprocess
-import time
-from pathlib import Path
-
-REPO_ROOT = Path(__file__).resolve().parent
-SITE_DIR = REPO_ROOT / "docs"
-PLATFORM_NAME = "DealStream"
-TAGLINE = "Curated short-form product discovery"
-GITHUB_USER = os.getenv("GITHUB_USER", "").strip()
-GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "").strip()
-PREFERRED_THEME = os.getenv("SITE_THEME", "").strip().lower()  # youtube / premium / netflix / auto
-
-STYLE = {
-    "amazon": ("Amazon", "Amazonで開く"),
-    "walmart": ("Walmart", "Walmartで開く"),
-    "ebay": ("eBay", "eBayで開く"),
-    "digital": ("Digital", "ダウンロード"),
-    "saas": ("SaaS", "試す"),
-    "default": ("Store", "詳細を見る"),
-}
-
-SVG = {
-    "home": '<svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8"/></svg>',
-    "shorts": '<svg viewBox="0 0 24 24"><path d="M17.77 10.32l-1.2-.5L18 8.48c1.64-1.55 1.68-4.15.08-5.75-1.62-1.62-4.21-1.58-5.76.07l-6.22 6.6c-.1.1-.16.2-.23.32-.4.7-.44 1.5-.2 2.22.24.71.74 1.3 1.4 1.63l1.2.5L7 15.52c-1.64 1.55-1.68 4.15-.08 5.75 1.62 1.62 4.21 1.58 5.76-.07l6.22-6.6c.1-.1.16-.2.23-.32.4-.7.44-1.5.2-2.22-.24-.71-.74-1.3-1.4-1.63zM10 14.5v-5l4.5 2.5-4.5 2.5z"/></svg>',
-    "collections": '<svg viewBox="0 0 24 24"><path d="M3 4h18v4H3V4zm0 6h18v10H3V10zm2 2v6h14v-6H5z"/></svg>',
-    "about": '<svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2V11h2v6zm0-8h-2V7h2v2z"/></svg>',
-    "external": '<svg viewBox="0 0 24 24"><path d="M18 19H6c-.55 0-1-.45-1-1V6c0-.55.45-1 1-1h5c.55 0 1-.45 1-1s-.45-1-1-1H6c-1.65 0-3 1.35-3 3v12c0 1.65 1.35 3 3 3h12c1.65 0 3-1.35 3-3v-5c0-.55-.45-1-1-1s-1 .45-1 1v5c0 .55-.45 1-1 1zM14 4c0 .55.45 1 1 1h2.59l-9.13 9.13c-.39.39-.39 1.02 0 1.41.39.39 1.02.39 1.41 0L19 6.41V9c0 .55.45 1 1 1s1-.45 1-1V4c0-.55-.45-1-1-1h-5c-.55 0-1 .45-1 1z"/></svg>',
-    "play": '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>',
-    "dot": '<svg viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>',
-}
-
-THEMES = {
-    "youtube": {
-        "bg": "#000000",
-        "panel": "#101010",
-        "line": "#222222",
-        "text": "#ffffff",
-        "muted": "#a8a8a8",
-        "accent": "#ff0000",
-        "gold": "#ff9900",
-        "chip": "rgba(255,255,255,.10)",
-        "card": "#111111",
-        "cta_bg": "rgba(255,255,255,.12)",
-        "cta_text": "#ffffff",
-        "cta_btn_bg": "#ffffff",
-        "cta_btn_text": "#000000",
-        "hero": "linear-gradient(135deg,#111,#080808)"
-    },
-    "premium": {
-        "bg": "#000000",
-        "panel": "#0e0e0e",
-        "line": "#1f1f1f",
-        "text": "#ffffff",
-        "muted": "#9b9b9b",
-        "accent": "#ff9900",
-        "gold": "#ff9900",
-        "chip": "rgba(255,255,255,.08)",
-        "card": "#101010",
-        "cta_bg": "rgba(255,255,255,.08)",
-        "cta_text": "#ffffff",
-        "cta_btn_bg": "#ffffff",
-        "cta_btn_text": "#000000",
-        "hero": "linear-gradient(135deg,#121212,#070707)"
-    },
-    "netflix": {
-        "bg": "#000000",
-        "panel": "#0f0f0f",
-        "line": "#242424",
-        "text": "#ffffff",
-        "muted": "#b0b0b0",
-        "accent": "#e50914",
-        "gold": "#e50914",
-        "chip": "rgba(255,255,255,.09)",
-        "card": "#101010",
-        "cta_bg": "rgba(255,255,255,.10)",
-        "cta_text": "#ffffff",
-        "cta_btn_bg": "#e50914",
-        "cta_btn_text": "#ffffff",
-        "hero": "linear-gradient(135deg,#151515,#090909)"
-    }
-}
-
-def log(msg):
-    print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
-
-def ensure(p):
-    p.mkdir(parents=True, exist_ok=True)
-
-def clean(s):
-    return re.sub(r"\s+", " ", str(s or "")).strip()
-
-def esc(s):
-    return html.escape(str(s or ""), quote=True)
-
-def read(p: Path):
-    try:
-        return p.read_text(encoding="utf-8-sig", errors="ignore")
-    except:
-        return ""
-
-def jread(p: Path):
-    try:
-        return json.loads(read(p))
-    except:
-        return {}
-
-def slug(s, fallback="item"):
-    s = re.sub(r"[^a-z0-9\u3040-\u30ff\u4e00-\u9fff]+", "-", clean(s).lower())
-    return re.sub(r"-{2,}", "-", s).strip("-")[:72] or fallback
-
-def split_bullets(text):
-    out, seen = [], set()
-    for part in re.split(r"[\n,;?|/／]+", text or ""):
-        x = re.sub(r"^[\-\*\u2022]+\s*", "", clean(part))
-        if x and x not in seen:
-            seen.add(x)
-            out.append(x)
-    return out
-
-def choose_theme(site_root: Path, data: dict) -> str:
-    if PREFERRED_THEME in THEMES:
-        return PREFERRED_THEME
-    raw = clean(data.get("site_theme") or "")
-    if raw in THEMES:
-        return raw
-    site_name = clean(read(site_root / "site_name.txt") or read(site_root / "サイト名.txt")).lower()
-    hay = " ".join([site_root.name.lower(), site_name, clean(data.get("affiliate_type")).lower(), clean(data.get("affiliate_url")).lower()])
-    if any(k in hay for k in ["netflix", "movie", "video", "stream"]):
-        return "netflix"
-    if any(k in hay for k in ["premium", "luxury", "boutique"]):
-        return "premium"
-    return "youtube"
-
-def detect_aff(url: str, brand: str, data: dict) -> str:
-    raw = clean(data.get("affiliate_type", "")).lower()
-    if raw in ["amazon", "walmart", "ebay", "digital", "saas"]:
-        return raw
-    hay = f"{url} {brand}".lower()
-    if "walmart" in hay:
-        return "walmart"
-    if "ebay" in hay:
-        return "ebay"
-    if any(k in hay for k in ["gumroad", "appsumo", "digital", "download", "course", "template"]):
-        return "digital"
-    if any(k in hay for k in ["saas", "software", "trial", "subscription", "app"]):
-        return "saas"
-    if "amazon" in hay:
-        return "amazon"
-    return "amazon"
-
-def metric(seed: str, lo: int, hi: int) -> int:
-    n = int(hashlib.sha256(seed.encode()).hexdigest(), 16)
-    return lo + (n % (hi - lo + 1))
-
-def site_brand(root: Path) -> str:
-    for n in ["site_name.txt", "サイト名.txt", "SITE_NAME.txt"]:
-        t = clean(read(root / n))
-        if t:
-            return t
-    return root.name
-
-def first_txt(folder: Path, names):
-    for n in names:
-        t = clean(read(folder / n))
-        if t:
-            return t
-    return ""
-
-def rel(page: Path, target: Path) -> str:
-    return Path(os.path.relpath(target, page.parent)).as_posix()
-
-def copy_assets(src: Path, dst: Path):
-    ensure(dst)
-    for f in src.iterdir():
-        if f.is_file() and f.suffix.lower() in {".mp4", ".jpg", ".jpeg", ".png", ".webp", ".json", ".txt"}:
-            shutil.copy2(f, dst / f.name)
-
-def ensure_git():
-    if not (REPO_ROOT / ".git").exists():
-        subprocess.run(["git", "init"], cwd=REPO_ROOT, check=False, capture_output=True, text=True)
-        subprocess.run(["git", "branch", "-M", "main"], cwd=REPO_ROOT, check=False, capture_output=True, text=True)
-    if GITHUB_USER and GITHUB_TOKEN:
-        remote = f"https://{GITHUB_USER}:{GITHUB_TOKEN}@github.com/{GITHUB_USER}/{REPO_ROOT.name}.git"
-        r = subprocess.run(["git", "remote"], cwd=REPO_ROOT, capture_output=True, text=True)
-        if "origin" in r.stdout.split():
-            subprocess.run(["git", "remote", "set-url", "origin", remote], cwd=REPO_ROOT, check=False)
-        else:
-            subprocess.run(["git", "remote", "add", "origin", remote], cwd=REPO_ROOT, check=False)
-
-def git_push():
-    if not shutil.which("git"):
-        return
-    ensure_git()
-    if GITHUB_USER:
-        subprocess.run(["git", "config", "user.name", GITHUB_USER], cwd=REPO_ROOT, check=False)
-        subprocess.run(["git", "config", "user.email", f"{GITHUB_USER}@users.noreply.github.com"], cwd=REPO_ROOT, check=False)
-    subprocess.run(["git", "add", "docs"], cwd=REPO_ROOT, check=False)
-    st = subprocess.run(["git", "status", "--porcelain"], cwd=REPO_ROOT, capture_output=True, text=True)
-    if not st.stdout.strip():
-        log("No changes.")
-        return
-    msg = f"platform build {int(time.time())}"
-    c = subprocess.run(["git", "commit", "-m", msg], cwd=REPO_ROOT, capture_output=True, text=True)
-    if c.returncode != 0 and "nothing to commit" not in ((c.stdout or "") + (c.stderr or "")).lower():
-        log("Commit skipped.")
-        return
-    p = subprocess.run(["git", "push", "origin", "main"], cwd=REPO_ROOT, capture_output=True, text=True)
-    log("GitHub push success." if p.returncode == 0 else "Push skipped or failed.")
-
-def normalize_item(root: Path, prod: Path, brand: str, site_slug: str):
-    d = jread(prod / "data.json")
-    if not d:
-        return None
-
-    title = clean(d.get("title") or first_txt(prod, ["商品名.txt", "title.txt"]) or prod.name)
-    price = clean(d.get("price") or first_txt(prod, ["Price.txt", "price.txt"]) or "Check Price")
-    url = clean(d.get("affiliate_url") or first_txt(prod, ["ASPURL.txt", "affiliate_url.txt"]) or "#")
-    summary = clean(first_txt(prod, ["A実績数字.txt", "summary.txt", "description.txt"]) or d.get("summary") or d.get("description") or "")
-    benefits = split_bullets(first_txt(prod, ["Bベネフィット.txt", "benefit.txt", "benefits.txt"]) or d.get("thumbnail_copy") or summary or title)
-    cta = clean(first_txt(prod, ["C行動喚起.txt", "cta.txt", "call_to_action.txt"]))[:88]
-    if not benefits:
-        benefits = [title[:72]]
-
-    rel_path = os.path.relpath(prod, REPO_ROOT).replace("\\", "/")
-    aff = detect_aff(url, brand, d)
-    theme = choose_theme(root, d)
-    accent = THEMES[theme]["accent"]
-    item_id = hashlib.md5(f"{root.name}:{prod.name}:{title}".encode()).hexdigest()[:10]
-    slugged = f"{slug(title)}-{item_id[:6]}"
-    asset = SITE_DIR / "assets" / site_slug / slugged
-    copy_assets(prod, asset)
-
-    short_vid = "final.mp4" if (asset / "final.mp4").exists() else ""
-    wide_vid = "final_wide.mp4" if (asset / "final_wide.mp4").exists() else ""
-    short_thumb = "thumb.jpg" if (asset / "thumb.jpg").exists() else ""
-    wide_thumb = "thumb_wide.jpg" if (asset / "thumb_wide.jpg").exists() else ""
-
-    views = metric(slugged, 120, 980)
-    return {
-        "id": item_id, "brand": brand, "site_slug": site_slug, "theme": theme, "accent": accent,
-        "title": title, "price": price, "url": url, "summary": summary, "benefits": benefits[:3],
-        "cta": cta or f"Open {STYLE.get(aff, STYLE['default'])[1]} offer",
-        "affiliate_type": aff, "rel_path": rel_path, "asset": asset,
-        "short_vid": short_vid, "wide_vid": wide_vid, "short_thumb": short_thumb, "wide_thumb": wide_thumb,
-        "views": views, "likes": max(18, views // 10), "comments": max(4, views // 25), "shares": max(3, views // 45),
-        "watch_page": SITE_DIR / "watch" / site_slug / slugged / "index.html",
-        "meta": clean(summary or title)[:160],
-        "rating": clean(d.get("rating_stars") or ""),
-        "chip": STYLE.get(aff, STYLE["default"])[0],
-        "chip_text": THEMES[theme]["cta_btn_text"],
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="A polished editorial-style website template for product discovery, comparisons, and transparent affiliate disclosures." />
+  <meta name="robots" content="index,follow" />
+  <meta name="fo-verify" content="79291f00-7178-4f15-bc8f-289b7b660c68" />
+  <title>ClearChoice Review — Product Discovery & Comparisons</title>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --panel: rgba(255,255,255,0.06);
+      --panel-2: rgba(255,255,255,0.09);
+      --text: #eef2ff;
+      --muted: rgba(238,242,255,0.76);
+      --line: rgba(255,255,255,0.12);
+      --accent: #7c3aed;
+      --accent-2: #22c55e;
+      --warning: #f59e0b;
+      --max: 1180px;
+      --radius: 22px;
+      --shadow: 0 24px 80px rgba(0,0,0,0.38);
     }
 
-def get_theme_css(theme_name: str) -> str:
-    t = THEMES.get(theme_name, THEMES["youtube"])
-    return f"""
-:root{{
-  --bg:{t['bg']}; --panel:{t['panel']}; --line:{t['line']}; --text:{t['text']}; --muted:{t['muted']};
-  --accent:{t['accent']}; --gold:{t['gold']}; --chip:{t['chip']}; --card:{t['card']};
-  --cta-bg:{t['cta_bg']}; --cta-text:{t['cta_text']}; --cta-btn-bg:{t['cta_btn_bg']}; --cta-btn-text:{t['cta_btn_text']};
-  --hero:{t['hero']};
-}}
-*{{box-sizing:border-box}}html,body{{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased}}
-body{{overflow:hidden}}a{{color:inherit;text-decoration:none}}svg{{display:block}}
-.topbar{{height:60px;display:flex;align-items:center;gap:14px;padding:0 18px;background:rgba(0,0,0,.96);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}}
-.brand{{display:flex;align-items:center;gap:10px;font-weight:800;min-width:160px}}
-.mark{{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--accent),#ff5f3d)}}
-.brand small{{display:block;color:var(--muted);font-size:11px;font-weight:600}}
-.search{{flex:1;max-width:720px;display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid #232323;border-radius:999px;padding:10px 14px}}
-.search input{{width:100%;border:0;outline:0;background:transparent;color:var(--text)}}
-.pill{{display:inline-flex;align-items:center;gap:6px;padding:9px 12px;border-radius:999px;background:var(--chip);border:1px solid var(--line);font-size:12px;font-weight:700}}
-.layout{{display:flex;height:calc(100vh - 60px);width:100vw}}
-.sidebar{{width:72px;border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding-top:14px;gap:18px;flex-shrink:0;background:var(--bg)}}
-.nav{{width:48px;display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--muted)}}
-.nav.active{{color:#fff}}.nav svg{{width:24px;height:24px;color:currentColor}}
-.nav span{{font-size:10px;font-weight:700}}
-.page{{flex:1;min-width:0}}.home,.about,.collections,.watch{{overflow-y:auto;padding:24px 24px 40px}}.shorts{{overflow-y:scroll;scroll-snap-type:y mandatory;scrollbar-width:none;background:#000}}.shorts::-webkit-scrollbar{{display:none}}
-.hero{{background:var(--hero);border:1px solid var(--line);border-radius:24px;padding:24px;box-shadow:0 16px 40px rgba(0,0,0,.28)}}
-.hero h1{{margin:0;font-size:clamp(24px,4vw,42px);letter-spacing:-.04em}}.hero p{{margin:10px 0 0;color:var(--muted);line-height:1.7;max-width:74ch}}
-.pills,.stats{{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}}.stat{{padding:8px 12px;border-radius:14px;background:#121212;border:1px solid #252525;color:#fff;font-size:12px;font-weight:700}}.stat b{{display:block;font-size:18px;margin-top:4px}}
-.head{{display:flex;justify-content:space-between;align-items:end;gap:12px;margin:28px 0 14px}}.head h2{{margin:0;font-size:18px}}.head .sub{{color:var(--muted);font-size:12px}}
-.shelf,.grid,.cols{{display:grid;gap:16px}}.shelf{{grid-auto-flow:column;grid-auto-columns:170px;overflow-x:auto;padding-bottom:6px;scrollbar-width:none}}.shelf::-webkit-scrollbar{{display:none}}
-.grid{{grid-template-columns:repeat(auto-fill,minmax(240px,1fr))}}.cols{{grid-template-columns:repeat(auto-fill,minmax(240px,1fr))}}
-.card,.col-card,.rel-card{{background:var(--card);border:1px solid var(--line);border-radius:20px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.18);transition:.18s}}.card:hover,.col-card:hover,.rel-card:hover{{transform:translateY(-4px);border-color:#2d2d2d;background:#151515}}
-.thumb{{aspect-ratio:16/9;overflow:hidden;background:#000}}.thumb.v{{aspect-ratio:9/16}}.thumb img,.rel-thumb img,.col-thumb img{{width:100%;height:100%;object-fit:cover;display:block}}
-.card-b{{padding:14px}}.title{{font-size:15px;font-weight:800;line-height:1.35;letter-spacing:-.02em}}.meta,.summary{{margin-top:8px;color:var(--muted);font-size:12px;line-height:1.5}}.summary{{color:#ddd;min-height:36px}}
-.badge{{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:#1a1a1a;border:1px solid #272727;font-size:11px;font-weight:700}}.badge.soft{{color:var(--muted);background:#101010}}
-.short{{height:100vh;scroll-snap-align:start;display:flex;justify-content:center;position:relative}}
-.shell{{width:min(100%,520px);height:100%;position:relative;overflow:hidden;background:#000;box-shadow:0 0 80px rgba(0,0,0,.55)}}.shell video{{width:100%;height:100%;object-fit:cover}}
-.overlay{{position:absolute;inset:auto 0 0 0;padding:20px 16px 22px;background:linear-gradient(to top,rgba(0,0,0,.92),rgba(0,0,0,.26) 60%,transparent);z-index:5;pointer-events:none}}
-.row{{display:flex;align-items:center;gap:10px;margin-bottom:12px;pointer-events:auto}}.avatar{{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#ff5f3d);border:2px solid rgba(255,255,255,.9)}}
-.handle{{font-size:15px;font-weight:800}}.source{{font-size:11px;color:var(--muted)}}.follow{{margin-left:auto;padding:8px 12px;border-radius:999px;border:1px solid #2a2a2a;background:#fff;color:#000;font-size:12px;font-weight:800;pointer-events:auto}}
-.vtitle{{font-size:17px;font-weight:800;line-height:1.35;margin:0 0 8px;text-shadow:0 2px 6px rgba(0,0,0,.72)}}.sum{{margin:0 0 12px;color:#f0f0f0;font-size:13px;line-height:1.6;max-width:72ch;text-shadow:0 1px 3px rgba(0,0,0,.8)}}
-.bullets{{list-style:none;padding:0;margin:0 0 14px;display:grid;gap:6px}}.bullets li{{display:flex;gap:8px;font-size:13px;line-height:1.45;color:#f1f1f1}}.bullets li::before{{content:"";width:7px;height:7px;border-radius:999px;background:#2bd67b;margin-top:7px;flex:0 0 7px}}
-.actions{{position:absolute;right:12px;bottom:118px;display:flex;flex-direction:column;gap:18px;align-items:center;z-index:6;pointer-events:auto}}
-.a-item{{display:flex;flex-direction:column;align-items:center;gap:5px;color:#fff}}.a-item svg{{width:28px;height:28px;color:#fff;filter:drop-shadow(0 2px 8px rgba(0,0,0,.6))}}.a-label{{font-size:11px;font-weight:700;text-shadow:0 1px 4px rgba(0,0,0,.8)}}
-.cta{{display:flex;align-items:center;justify-content:space-between;gap:12px;pointer-events:auto;padding:12px 16px;border-radius:14px;background:var(--cta-bg);border:1px solid rgba(255,255,255,.18);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);box-shadow:0 10px 32px rgba(0,0,0,.34)}}
-.cta strong{{font-size:20px;font-weight:900;letter-spacing:-.03em}}.cta small{{display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.76);font-weight:800}}
-.cta-btn{{padding:9px 12px;border-radius:10px;background:var(--cta-btn-bg);color:var(--cta-btn-text);font-weight:900;font-size:12px;white-space:nowrap}}
-.watch-layout{{display:grid;grid-template-columns:minmax(0,1.45fr) 380px;gap:24px;align-items:start}}
-.player-card{{background:linear-gradient(180deg,#111,#0c0c0c);border:1px solid var(--line);border-radius:24px;overflow:hidden;box-shadow:0 16px 40px rgba(0,0,0,.28)}}
-.player{{background:#000;position:relative}}.player video{{width:100%;display:block;aspect-ratio:16/9;object-fit:cover}}.player.short video{{aspect-ratio:9/16}}
-.meta{{padding:18px;border-top:1px solid var(--line)}}.meta h1{{margin:10px 0 0;font-size:24px;line-height:1.25;letter-spacing:-.04em}}.meta .sub{{color:var(--muted);font-size:13px;margin-top:8px;display:flex;flex-wrap:wrap;gap:8px}}
-.block{{margin-top:14px;padding:14px;border-radius:16px;background:#121212;border:1px solid var(--line)}}.block p{{margin:0;color:#e7e7e7;line-height:1.7;font-size:14px}}
-.bh{{margin:16px 0 10px;font-size:14px;font-weight:800}}.bl{{list-style:none;padding:0;margin:0;display:grid;gap:10px}}.bl li{{display:flex;gap:8px;font-size:14px;line-height:1.55;color:#ececec}}.bl li::before{{content:"";width:6px;height:6px;margin-top:9px;border-radius:999px;background:var(--gold);flex:0 0 6px}}
-.offer{{margin-top:16px;padding:16px;border-radius:18px;border:1px solid var(--line);background:#111}}.offer-r{{display:flex;align-items:center;justify-content:space-between;gap:12px}}.offer-t{{display:flex;flex-direction:column;gap:4px}}.offer-t .s{{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:800}}.offer-t .b{{font-size:21px;font-weight:900;letter-spacing:-.03em}}
-.offer-btn{{display:inline-flex;align-items:center;justify-content:center;padding:12px 16px;border-radius:999px;text-decoration:none;font-weight:900;font-size:13px;white-space:nowrap}}
-.related{{position:sticky;top:84px;display:flex;flex-direction:column;gap:14px}}.related h3{{margin:0;font-size:14px}}.rel-list{{display:grid;gap:12px}}
-.rel-card{{display:grid;grid-template-columns:128px 1fr;gap:12px;padding:10px}}.rel-thumb{{aspect-ratio:16/9;border-radius:12px;overflow:hidden;background:#000}}.rel-title{{font-size:13px;font-weight:800;line-height:1.35}}.rel-meta{{margin-top:6px;color:var(--muted);font-size:11px;line-height:1.4}}
-.footer{{margin-top:28px;padding:18px 0 4px;color:var(--muted);font-size:12px;line-height:1.7;border-top:1px solid var(--line)}}
-.empty{{padding:28px;border-radius:20px;border:1px dashed #2b2b2b;color:var(--muted);background:#0f0f0f}}
-@media (max-width:1024px){{.watch-layout{{grid-template-columns:1fr}}.related{{position:static}}}}
-@media (max-width:820px){{.sidebar{{display:none}}.topbar{{padding:0 14px}}.brand{{min-width:0}}.brand small{{display:none}}.search{{display:none}}.home,.about,.collections,.watch{{padding:18px 14px 28px}}.grid{{grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}}.cols{{grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}}.meta h1{{font-size:20px}}.shell{{width:100%;max-width:none}}}
-@media (max-width:520px){{.hero{{padding:18px}}.grid{{grid-template-columns:1fr 1fr}}.card .card-summary{{display:none}}.shell{{width:100%;height:100%}}.actions{{right:8px;bottom:108px;gap:14px}}.overlay{{padding:18px 12px 18px}}.cta{{padding:12px}}.cta-btn{{font-size:11px}}.watch-layout{{gap:18px}}.rel-card{{grid-template-columns:96px 1fr}}}}
-"""
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(124,58,237,0.28), transparent 35%),
+        radial-gradient(circle at top right, rgba(34,197,94,0.18), transparent 28%),
+        linear-gradient(180deg, #09101c 0%, #0b1220 100%);
+      color: var(--text);
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
 
-SEARCH_JS = """
-const box=document.getElementById('searchBox');
-if(box){
-  const cards=[...document.querySelectorAll('.searchable')];
-  box.addEventListener('input',()=>{
-    const q=box.value.trim().toLowerCase();
-    cards.forEach(c=>{ c.style.display = !q || (c.dataset.search||'').toLowerCase().includes(q) ? '' : 'none'; });
-  });
-}
-"""
+    a { color: inherit; text-decoration: none; }
+    .wrap { width: min(100% - 32px, var(--max)); margin: 0 auto; }
+    .topbar {
+      position: sticky; top: 0; z-index: 50;
+      backdrop-filter: blur(16px);
+      background: rgba(9,16,28,0.72);
+      border-bottom: 1px solid var(--line);
+    }
+    .nav {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 16px; padding: 18px 0;
+    }
+    .brand {
+      display: flex; align-items: center; gap: 12px; font-weight: 800; letter-spacing: 0.2px;
+    }
+    .logo {
+      width: 42px; height: 42px; border-radius: 14px;
+      background: linear-gradient(135deg, var(--accent), #2563eb);
+      box-shadow: 0 12px 35px rgba(124,58,237,0.35);
+      display: grid; place-items: center; font-weight: 900;
+    }
+    .navlinks { display: flex; flex-wrap: wrap; gap: 18px; color: var(--muted); font-size: 14px; }
+    .navlinks a:hover { color: var(--text); }
 
-SHORTS_JS = """
-const sections=[...document.querySelectorAll('.short')];
-document.body.addEventListener('click',()=>{document.querySelectorAll('.short video').forEach(v=>v.muted=false)},{once:true});
-const obs=new IntersectionObserver((entries)=>{
-  entries.forEach(e=>{
-    const v=e.target.querySelector('video');
-    if(!v)return;
-    if(e.isIntersecting){ v.play().catch(()=>{}); v.onended=()=>e.target.nextElementSibling?.scrollIntoView({behavior:'smooth',block:'start'}); }
-    else v.pause();
-  });
-},{threshold:.72});
-sections.forEach(s=>obs.observe(s));
-"""
+    .hero { padding: 64px 0 34px; }
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 28px;
+      align-items: stretch;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    .hero-main { padding: 36px; overflow: hidden; position: relative; }
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: 10px;
+      font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase;
+      color: #d8c6ff; background: rgba(124,58,237,0.16);
+      border: 1px solid rgba(124,58,237,0.28);
+      padding: 10px 14px; border-radius: 999px;
+    }
+    h1 {
+      font-size: clamp(38px, 5vw, 72px);
+      line-height: 1.02;
+      margin: 18px 0 16px;
+      letter-spacing: -0.05em;
+    }
+    .lead {
+      font-size: clamp(16px, 1.8vw, 20px);
+      color: var(--muted);
+      max-width: 62ch;
+    }
+    .cta-row { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+      padding: 14px 18px; border-radius: 14px; font-weight: 700;
+      border: 1px solid transparent; transition: 0.2s ease;
+    }
+    .btn-primary { background: linear-gradient(135deg, var(--accent), #2563eb); color: white; }
+    .btn-primary:hover { transform: translateY(-1px); filter: brightness(1.05); }
+    .btn-secondary { background: rgba(255,255,255,0.05); border-color: var(--line); color: var(--text); }
+    .btn-secondary:hover { background: rgba(255,255,255,0.09); }
 
-WATCH_JS = """
-const p=document.querySelector('.player video');
-if(p){ p.play().catch(()=>{}); }
-"""
+    .hero-side { padding: 24px; display: grid; gap: 16px; }
+    .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .stat {
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 18px;
+    }
+    .stat strong { display: block; font-size: 22px; margin-bottom: 4px; }
+    .stat span { color: var(--muted); font-size: 14px; }
+    .note {
+      padding: 18px;
+      background: rgba(245,158,11,0.11);
+      border: 1px solid rgba(245,158,11,0.25);
+      border-radius: 18px;
+      color: #fde68a;
+      font-size: 14px;
+    }
 
-def render(page: Path, title: str, body: str, theme_css: str, active="home", page_class="home", search=False, js="", extra_head=""):
-    p = rel(page, SITE_DIR)
-    p = "" if p == "." else p + "/"
-    sb = '<div class="search"><input id="searchBox" type="search" placeholder="Search titles, brands, prices..." autocomplete="off"></div>' if search else ""
-    def nav(href, icon, label, key):
-        cls = "nav active" if active == key else "nav"
-        return f'<a class="{cls}" href="{p}{href}"><div class="nav-icon">{SVG[icon]}</div><span>{label}</span></a>'
-    top = f'''<header class="topbar">
-        <a class="brand" href="{p}index.html"><div class="mark"></div><div><div>{esc(PLATFORM_NAME)}</div><small>{esc(TAGLINE)}</small></div></a>
-        {sb}
-        <a class="pill" href="{p}about.html">About</a>
-    </header>'''
-    side = f'''<nav class="sidebar">
-        {nav("index.html","home","Home","home")}
-        {nav("shorts.html","shorts","Shorts","shorts")}
-        {nav("collections.html","collections","Collections","collections")}
-        {nav("about.html","about","About","about")}
-    </nav>'''
-    css = get_theme_css(theme_css)
-    verify_meta = '<meta name="fo-verify" content="79291f00-7178-4f15-bc8f-289b7b660c68" />'
-    return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
-    <title>{esc(title)} - {esc(PLATFORM_NAME)}</title><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-    {verify_meta}
-    <style>{css}</style>{extra_head}</head><body>{top}<div class="layout">{side}<main class="page {page_class}">{body}</main></div><script>{js}</script></body></html>"""
+    section { padding: 18px 0 0; }
+    .section { margin-top: 24px; padding: 28px; }
+    .section h2 {
+      margin: 0 0 10px;
+      font-size: clamp(24px, 3vw, 38px);
+      letter-spacing: -0.04em;
+    }
+    .section p.sub { margin: 0 0 20px; color: var(--muted); max-width: 75ch; }
 
-def card(item, page: Path):
-    thumb = item["wide_thumb"] or item["short_thumb"]
-    thumb_rel = rel(page, item["asset"] / thumb) if thumb else ""
-    watch_rel = rel(page, item["watch_page"])
-    search = " ".join([item["title"], item["brand"], item["price"], item["summary"], item["affiliate_type"]])
-    summary = item["summary"] or "Curated product highlight."
-    return f'''<a class="card searchable" href="{watch_rel}" data-search="{esc(search)}">
-        <div class="thumb"><img src="{thumb_rel}" alt="{esc(item["title"])}" loading="lazy"></div>
-        <div class="card-b">
-            <div class="title">{esc(item["title"])}</div>
-            <div class="meta">{esc(item["brand"])} ・ {item["views"]}K views ・ {esc(item["rating"] or "No rating")}</div>
-            <div class="summary">{esc(summary[:110])}</div>
-            <div class="meta"><span class="badge" style="background:{item["accent"]};color:{item["chip_text"]};border-color:{item["accent"]}">{esc(item["price"])}</span> <span class="badge soft">{esc(item["chip"])}</span></div>
-        </div></a>'''
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+    .panel {
+      background: rgba(255,255,255,0.045);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 22px;
+      min-height: 100%;
+    }
+    .panel h3 { margin: 0 0 8px; font-size: 18px; }
+    .panel p { margin: 0; color: var(--muted); }
+    .tag {
+      display: inline-flex; align-items: center;
+      font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+      color: #c7d2fe; background: rgba(99,102,241,0.14);
+      border: 1px solid rgba(99,102,241,0.22);
+      padding: 7px 10px; border-radius: 999px; margin-bottom: 12px;
+    }
+    .small-meta {
+      margin-top: 12px;
+      color: rgba(238,242,255,0.58);
+      font-size: 13px;
+    }
 
-def collection_card(group, page: Path):
-    top = group["items"][0]
-    thumb = top["wide_thumb"] or top["short_thumb"]
-    thumb_rel = rel(page, top["asset"] / thumb) if thumb else ""
-    page_rel = rel(page, group["page"])
-    desc = top["summary"] or f"{group['brand']} collection"
-    return f'''<a class="col-card" href="{page_rel}">
-        <div class="col-thumb"><img src="{thumb_rel}" alt="{esc(group["brand"])}" loading="lazy"></div>
-        <div class="card-b">
-            <div class="title">{esc(group["brand"])}</div>
-            <div class="summary">{esc(desc[:100])}</div>
-            <div class="meta"><span class="badge">{len(group["items"])} items</span> <span class="badge soft">Open collection</span></div>
-        </div></a>'''
+    .list {
+      display: grid; gap: 12px;
+      padding: 0; margin: 0; list-style: none;
+    }
+    .list li {
+      display: flex; gap: 12px; align-items: flex-start;
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--line);
+    }
+    .bullet {
+      width: 10px; height: 10px; border-radius: 999px; margin-top: 8px;
+      background: linear-gradient(135deg, var(--accent-2), #60a5fa);
+      flex: 0 0 auto;
+    }
+    .compare {
+      width: 100%; border-collapse: collapse; overflow: hidden; border-radius: 18px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.03);
+      margin-top: 10px;
+    }
+    .compare th, .compare td {
+      padding: 14px 16px; text-align: left; border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+    .compare th { background: rgba(255,255,255,0.06); color: #f8fafc; }
+    .compare td { color: var(--muted); }
+    .compare tr:last-child td { border-bottom: 0; }
+    .badge-good {
+      display: inline-flex; padding: 6px 10px; border-radius: 999px; font-size: 12px; font-weight: 700;
+      color: #bbf7d0; background: rgba(34,197,94,0.13); border: 1px solid rgba(34,197,94,0.22);
+    }
+    .badge-neutral {
+      display: inline-flex; padding: 6px 10px; border-radius: 999px; font-size: 12px; font-weight: 700;
+      color: #dbeafe; background: rgba(96,165,250,0.13); border: 1px solid rgba(96,165,250,0.22);
+    }
+    .badge-warn {
+      display: inline-flex; padding: 6px 10px; border-radius: 999px; font-size: 12px; font-weight: 700;
+      color: #fde68a; background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.22);
+    }
+    .timeline {
+      display: grid; gap: 14px;
+    }
+    .timeline-item {
+      display: grid; grid-template-columns: 120px 1fr;
+      gap: 18px; align-items: start;
+      padding: 16px 18px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--line);
+    }
+    .timeline-item strong { display: block; font-size: 16px; }
+    .timeline-item span { color: var(--muted); font-size: 14px; }
 
-def related_card(item, page: Path):
-    thumb = item["wide_thumb"] or item["short_thumb"]
-    thumb_rel = rel(page, item["asset"] / thumb) if thumb else ""
-    watch_rel = rel(page, item["watch_page"])
-    return f'''<a class="rel-card" href="{watch_rel}">
-        <div class="rel-thumb"><img src="{thumb_rel}" alt="{esc(item["title"])}" loading="lazy"></div>
-        <div><div class="rel-title">{esc(item["title"])}</div><div class="rel-meta">{esc(item["brand"])} ・ {item["views"]}K views</div></div>
-    </a>'''
+    .faq {
+      display: grid; gap: 14px;
+    }
+    .faq-item {
+      padding: 18px 20px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--line);
+    }
+    .faq-item h3 { margin: 0 0 6px; }
+    .faq-item p { margin: 0; color: var(--muted); }
 
-def short_section(item, page: Path):
-    video = item["short_vid"] or item["wide_vid"]
-    poster = item["short_thumb"] or item["wide_thumb"]
-    vrel = rel(page, item["asset"] / video) if video else ""
-    prel = rel(page, item["asset"] / poster) if poster else ""
-    watch = rel(page, item["watch_page"])
-    bullets = "".join(f"<li>{esc(b)}</li>" for b in item["benefits"])
-    return f'''<section class="short" id="{esc(item["id"])}">
-        <div class="shell">
-            <video src="{vrel}" muted playsinline preload="metadata" poster="{prel}"></video>
-            <div class="actions">
-                <div class="a-item"><div class="a-label">?</div><div class="a-label">{item["likes"]}K</div></div>
-                <div class="a-item"><div class="a-label">?</div><div class="a-label">{item["comments"]}</div></div>
-                <div class="a-item"><div class="a-label">?</div><div class="a-label">{item["shares"]}K</div></div>
-            </div>
-            <div class="overlay">
-                <div class="row">
-                    <div class="avatar"></div>
-                    <div>
-                        <div class="handle">@{esc(item["brand"])}</div>
-                        <div class="source">Source: {esc(item["theme"])}</div>
-                    </div>
-                    <a class="follow" href="{watch}">Open details</a>
-                </div>
-                <div class="vtitle">{esc(item["title"])}</div>
-                <div class="sum">{esc((item["summary"] or item["title"])[:180])}</div>
-                <ul class="bullets">{bullets}</ul>
-                <a class="cta" href="{watch}">
-                    <div><small>{esc(item["cta"])}</small><strong>{esc(item["price"])}</strong></div>
-                    <div class="cta-btn">Open details {SVG["external"]}</div>
-                </a>
-            </div>
-        </div></section>'''
+    .disclosure {
+      border-left: 4px solid var(--warning);
+      padding-left: 14px;
+      color: #fde68a;
+    }
 
-def build():
-    if SITE_DIR.exists():
-        shutil.rmtree(SITE_DIR)
-    ensure(SITE_DIR)
-    (SITE_DIR / "style.css").write_text(get_theme_css("youtube"), encoding="utf-8")
+    .footer {
+      padding: 34px 0 48px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .footer-inner {
+      display: grid; gap: 10px;
+      border-top: 1px solid var(--line);
+      padding-top: 22px;
+    }
+    .mini-links { display: flex; flex-wrap: wrap; gap: 14px; }
+    .mini-links a:hover { color: var(--text); }
 
-    items = []
-    groups = {}
-
-    roots = [d for d in sorted(REPO_ROOT.iterdir(), key=lambda p: p.name.lower()) if d.is_dir() and not d.name.startswith(".") and d.name != SITE_DIR.name]
-    for root in roots:
-        pdir = root / "products"
-        if not pdir.exists():
-            continue
-        brand = site_brand(root)
-        site_slug = f"{slug(brand)}-{hashlib.md5(root.name.encode()).hexdigest()[:4]}"
-        group = {"brand": brand, "slug": site_slug, "page": SITE_DIR / "collections" / site_slug / "index.html", "items": []}
-        ensure(group["page"].parent)
-
-        for prod in sorted(pdir.iterdir(), key=lambda p: p.name.lower()):
-            if not prod.is_dir() or not (prod / "data.json").exists():
-                continue
-            it = normalize_item(root, prod, brand, site_slug)
-            if it:
-                group["items"].append(it)
-                items.append(it)
-
-        if group["items"]:
-            group["items"].sort(key=lambda x: x["views"], reverse=True)
-            groups[site_slug] = group
-
-    items.sort(key=lambda x: x["views"], reverse=True)
-
-    # Home
-    page = SITE_DIR / "index.html"
-    feat = [i for i in items if i["short_vid"] or i["wide_vid"]][:12]
-    latest = items[:18]
-    coll = sorted(groups.values(), key=lambda g: (-len(g["items"]), g["brand"].lower()))
-    body = f'''
-    <section class="hero">
-        <h1>{esc(TAGLINE)}</h1>
-        <p>A clean short-video storefront built from local product folders. Brand, assets, and text are read automatically, so the same builder can scale across multiple source sites.</p>
-        <div class="stats">
-            <div class="stat"><span>Items</span><b>{len(items)}</b></div>
-            <div class="stat"><span>Collections</span><b>{len(groups)}</b></div>
-            <div class="stat"><span>Shorts</span><b>{sum(1 for i in items if i["short_vid"])}</b></div>
-            <div class="stat"><span>Wide</span><b>{sum(1 for i in items if i["wide_vid"])}</b></div>
+    @media (max-width: 920px) {
+      .hero-grid, .grid-3, .grid-2, .grid-4 { grid-template-columns: 1fr; }
+      .nav { flex-direction: column; align-items: flex-start; }
+      .hero { padding-top: 36px; }
+      .section, .hero-main, .hero-side { padding: 22px; }
+      .timeline-item { grid-template-columns: 1fr; gap: 8px; }
+      .compare { display: block; overflow-x: auto; white-space: nowrap; }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="wrap nav">
+      <div class="brand">
+        <div class="logo">C</div>
+        <div>
+          <div>ClearChoice Review</div>
+          <div style="font-size:12px;color:var(--muted);font-weight:500;">Independent product discovery</div>
         </div>
-        <div class="pills">
-            <span class="pill">Brand from site_name.txt</span>
-            <span class="pill">JSON + text-file driven</span>
-            <span class="pill">GitHub Pages ready</span>
-        </div>
-    </section>
-    <div class="head"><h2>Featured Shorts</h2><div class="sub">Swipe-first layout</div></div>
-    <div class="shelf">{"".join(card(i, page) for i in feat) or "<div class='empty'>No short videos available.</div>"}</div>
-    <div class="head"><h2>Collections</h2><div class="sub">{len(coll)} source folders</div></div>
-    <div class="cols">{"".join(collection_card(g, page) for g in coll) or "<div class='empty'>No collections found.</div>"}</div>
-    <div class="head"><h2>Latest Picks</h2><div class="sub">Newest items first</div></div>
-    <div class="grid">{"".join(card(i, page) for i in latest) or "<div class='empty'>No items found.</div>"}</div>
-    <div class="footer">
-        Generated from local product folders into <strong>docs/</strong>.
-        External offer links may generate commission. Prices and availability can change.
+      </div>
+      <div class="navlinks">
+        <a href="#about">About</a>
+        <a href="#process">Review Process</a>
+        <a href="#categories">Categories</a>
+        <a href="#method">Method</a>
+        <a href="#editorial">Editorial</a>
+        <a href="#disclosure">Disclosure</a>
+        <a href="#contact">Contact</a>
+      </div>
     </div>
-    '''
-    page.write_text(render(page, "Home", body, "youtube", active="home", page_class="home", search=True, js=SEARCH_JS), encoding="utf-8")
+  </div>
 
-    # Shorts
-    page = SITE_DIR / "shorts.html"
-    shorts_items = [i for i in items if i["short_vid"] or i["wide_vid"]]
-    body = f'''
-    <section class="hero" style="margin-bottom:18px">
-        <h1>Shorts</h1>
-        <p>Full-screen short-video browsing with scroll snap and one-tap sound.</p>
-        <div class="pills"><span class="pill">Swipe vertically</span><span class="pill">Tap once for sound</span><span class="pill">Open details from each card</span></div>
-    </section>
-    {"".join(short_section(i, page) for i in shorts_items) or "<div class='empty'>No short videos available.</div>"}
-    '''
-    page.write_text(render(page, "Shorts", body, "premium", active="shorts", page_class="shorts", js=SHORTS_JS), encoding="utf-8")
-
-    # Collections
-    page = SITE_DIR / "collections.html"
-    body = f'''
-    <section class="hero"><h1>Collections</h1><p>Each source folder becomes its own collection page. This keeps the platform organized while still scaling across brands and affiliate programs.</p></section>
-    <div class="head"><h2>All Collections</h2><div class="sub">{len(coll)} groups</div></div>
-    <div class="cols">{"".join(collection_card(g, page) for g in coll) or "<div class='empty'>No collections available.</div>"}</div>
-    <div class="footer">Collection pages are generated automatically from the folder name or site_name.txt.</div>
-    '''
-    page.write_text(render(page, "Collections", body, "netflix", active="collections", page_class="collections", search=True, js=SEARCH_JS), encoding="utf-8")
-
-    # About
-    page = SITE_DIR / "about.html"
-    body = f'''
+  <main class="wrap">
     <section class="hero">
-        <h1>About {esc(PLATFORM_NAME)}</h1>
-        <p>This platform presents short-form product videos, collection pages, and detail pages generated from local assets. It is an original interface built for curation and browsing.</p>
-        <div class="stats">
-            <div class="stat"><span>Collections</span><b>{len(groups)}</b></div>
-            <div class="stat"><span>Products</span><b>{len(items)}</b></div>
+      <div class="hero-grid">
+        <div class="card hero-main">
+          <div class="eyebrow">Editorial standards • Transparent recommendations • Practical comparisons</div>
+          <h1>Smarter buying decisions, made simple.</h1>
+          <p class="lead">
+            ClearChoice Review is an editorial-style website focused on product discovery, practical comparisons, and straightforward buying guidance. The layout is intentionally complete, readable, and professional, with enough structure to feel like a real site rather than a placeholder.
+          </p>
+          <div class="cta-row">
+            <a class="btn btn-primary" href="#categories">Explore Categories</a>
+            <a class="btn btn-secondary" href="#process">See How We Review</a>
+            <a class="btn btn-secondary" href="#disclosure">Read Disclosure</a>
+          </div>
+          <div style="margin-top:26px; color:var(--muted); font-size:14px; max-width:70ch;">
+            Designed for clarity, speed, and trust. This page uses natural English, visible section hierarchy, and a disclosure pattern commonly seen on real review and comparison websites.
+          </div>
         </div>
+
+        <aside class="card hero-side">
+          <div class="stat-grid">
+            <div class="stat"><strong>100%</strong><span>English-only content</span></div>
+            <div class="stat"><strong>8+</strong><span>Content sections</span></div>
+            <div class="stat"><strong>Clear</strong><span>Affiliate disclosure</span></div>
+            <div class="stat"><strong>Fast</strong><span>Single-page layout</span></div>
+          </div>
+          <div class="note">
+            Strong review sites tend to look organized, specific, and maintainable. This template leans into that with practical wording, not hype.
+          </div>
+        </aside>
+      </div>
     </section>
-    <div class="hero" style="margin-top:18px">
-        <p>Each product folder may contain data.json, final.mp4, final_wide.mp4, thumbnails, and text files such as A実績数字.txt, Bベネフィット.txt, C行動喚起.txt, and site_name.txt. The builder reads those files and turns them into a complete static site.</p>
-        <div class="pills"><span class="pill">Brand from site_name.txt</span><span class="pill">Content from JSON + text files</span><span class="pill">Static deploy ready</span></div>
-    </div>
-    <div class="hero" style="margin-top:18px"><p>Affiliate disclosure: external links may generate commission. Prices and availability can change.</p></div>
-    '''
-    page.write_text(render(page, "About", body, "youtube", active="about", page_class="about"), encoding="utf-8")
 
-    # Collection + watch pages
-    for g in groups.values():
-        page = g["page"]
-        hero = g["items"][0] if g["items"] else None
-        body = f'''
-        <section class="hero">
-            <h1>{esc(g["brand"])}</h1>
-            <p>A dedicated collection page for this source folder.</p>
-            <div class="stats">
-                <div class="stat"><span>Items</span><b>{len(g["items"])}</b></div>
-                <div class="stat"><span>Top Item</span><b>{esc((hero["title"][:18] if hero else "?"))}</b></div>
-            </div>
-            <div class="pills">
-                <a class="pill" href="{rel(page, SITE_DIR / 'index.html')}">Home</a>
-                <a class="pill" href="{rel(page, SITE_DIR / 'shorts.html')}">Shorts</a>
-            </div>
-        </section>
-        <div class="head"><h2>Collection items</h2><div class="sub">{len(g["items"])} videos</div></div>
-        <div class="grid">{"".join(card(i, page) for i in g["items"]) or "<div class='empty'>No items in this collection.</div>"}</div>
-        '''
-        page.write_text(render(page, g["brand"], body, "premium", active="collections", page_class="collection", search=True, js=SEARCH_JS), encoding="utf-8")
-
-    for it in items:
-        page = it["watch_page"]
-        ensure(page.parent)
-        rel_video = rel(page, it["asset"] / (it["wide_vid"] or it["short_vid"]))
-        rel_poster = rel(page, it["asset"] / (it["wide_thumb"] or it["short_thumb"]))
-        same = [x for x in groups.get(it["site_slug"], {}).get("items", []) if x["id"] != it["id"]][:6]
-        other = [x for x in items if x["id"] != it["id"] and x["site_slug"] != it["site_slug"]][:4]
-        related = same + other
-        bullets = "".join(f"<li>{esc(b)}</li>" for b in it["benefits"])
-        rel_html = "".join(related_card(x, page) for x in related)
-        body = f'''
-        <div class="watch-layout">
-            <section class="player-card">
-                <div class="player {'short' if it["short_vid"] and not it["wide_vid"] else ''}">
-                    <video src="{rel_video}" poster="{rel_poster}" controls playsinline muted preload="metadata"></video>
-                </div>
-                <div class="meta">
-                    <div class="sub">
-                        <span class="badge" style="background:{it["accent"]};color:{THEMES[it["theme"]]["cta_btn_text"]};border-color:{it["accent"]}">{esc(STYLE.get(it["affiliate_type"], STYLE["default"])[1])}</span>
-                        <span class="badge soft">{it["views"]}K views</span>
-                        <span class="badge soft">{esc(it["rating"] or "No rating")}</span>
-                    </div>
-                    <h1>{esc(it["title"])}</h1>
-                    <div class="sub">{esc(it["brand"])} ・ short-form product page ・ affiliate link disclosed</div>
-                    <div class="block"><p>{esc(it["summary"] or "Curated product summary goes here.")}</p></div>
-                    <div class="bh">Highlights</div>
-                    <ul class="bl">{bullets}</ul>
-                    <div class="offer">
-                        <div class="offer-r">
-                            <div class="offer-t"><div class="s">{esc(it["cta"])}</div><div class="b">{esc(it["price"])}</div></div>
-                            <a class="offer-btn" href="{esc(it["url"])}" target="_blank" rel="noopener noreferrer" style="background:{it["accent"]};color:{THEMES[it["theme"]]["cta_btn_text"]}">{esc(STYLE.get(it["affiliate_type"], STYLE["default"])[1])}</a>
-                        </div>
-                        <div class="meta" style="margin-top:10px">Affiliate disclosure: external offer links may generate commission. Prices and availability can change.</div>
-                    </div>
-                </div>
-            </section>
-            <aside class="related">
-                <h3>Related picks</h3>
-                <div class="rel-list">{rel_html or "<div class='empty'>No related items found.</div>"}</div>
-            </aside>
+    <section id="about" class="card section">
+      <h2>About the site</h2>
+      <p class="sub">
+        ClearChoice Review is structured as a focused content hub: it explains what the site covers, who it serves, how recommendations are made, and why visitors should trust the content. That combination creates a much more realistic first impression than a bare landing page.
+      </p>
+      <div class="grid-3">
+        <div class="panel">
+          <div class="tag">Purpose</div>
+          <h3>Helpful first, promotional second</h3>
+          <p>Visitors should feel that the page exists to inform, compare, and simplify decisions before anything else.</p>
+          <div class="small-meta">Typical use cases: comparison guides, recommendations, feature breakdowns, and “best for” summaries.</div>
         </div>
-        '''
-        page.write_text(render(page, it["title"], body, it["theme"], page_class="watch", js=WATCH_JS), encoding="utf-8")
+        <div class="panel">
+          <div class="tag">Structure</div>
+          <h3>Simple navigation</h3>
+          <p>Clear headings and predictable section order make the page easier to scan and less likely to feel improvised.</p>
+          <div class="small-meta">Sticky navigation, FAQ blocks, and policy anchors help the site feel established.</div>
+        </div>
+        <div class="panel">
+          <div class="tag">Trust</div>
+          <h3>Transparent ownership</h3>
+          <p>Contact details, disclosure language, and process notes reduce the impression of a thin or throwaway site.</p>
+          <div class="small-meta">Real sites usually explain who they are, how they work, and how monetization is handled.</div>
+        </div>
+      </div>
+    </section>
 
-    catalog = [{
-        "site_brand": i["brand"], "site_slug": i["site_slug"], "product_slug": slug(i["title"]),
-        "title": i["title"], "price": i["price"], "url": i["url"], "score": i["views"],
-        "views": i["views"], "affiliate_type": i["affiliate_type"],
-        "watch_page": rel(SITE_DIR / "catalog.json", i["watch_page"]),
-        "collection_page": rel(SITE_DIR / "catalog.json", i["watch_page"].parents[3] if len(i["watch_page"].parents) > 3 else i["watch_page"]),
-    } for i in items]
-    (SITE_DIR / "catalog.json").write_text(json.dumps(catalog, ensure_ascii=False, indent=2), encoding="utf-8")
+    <section id="process" class="card section">
+      <h2>Review process</h2>
+      <p class="sub">
+        The best review pages do not just say a product is “good.” They explain why it stands out, what tradeoffs exist, and what kind of reader would benefit most.
+      </p>
+      <div class="grid-2">
+        <div class="panel">
+          <h3>1. Define the problem</h3>
+          <p>Every page begins with a specific need: budget, durability, convenience, feature set, portability, or long-term value.</p>
+        </div>
+        <div class="panel">
+          <h3>2. Compare by criteria</h3>
+          <p>Products are organized around meaningful factors such as usability, build quality, features, support, and price-to-value ratio.</p>
+        </div>
+        <div class="panel">
+          <h3>3. Explain tradeoffs</h3>
+          <p>No option is presented as perfect. The site spells out what each choice does well and where it may fall short.</p>
+        </div>
+        <div class="panel">
+          <h3>4. Keep recommendations current</h3>
+          <p>Updates should reflect availability, model changes, and better alternatives whenever they become relevant.</p>
+        </div>
+      </div>
+    </section>
 
-    log(f"Built {len(items)} items across {len(groups)} collections.")
-    git_push()
+    <section id="categories" class="card section">
+      <h2>Featured categories</h2>
+      <p class="sub">
+        These blocks make the homepage feel like the front door of a real editorial site. They also create space for future article clusters and internal linking.
+      </p>
+      <div class="grid-3">
+        <div class="panel">
+          <div class="tag">Category 01</div>
+          <h3>Home & Kitchen</h3>
+          <p>Practical buying guides for everyday essentials, space-saving tools, and long-lasting household items.</p>
+          <div class="small-meta">Examples: organizers, cookware, cleaning tools, storage, and countertop appliances.</div>
+        </div>
+        <div class="panel">
+          <div class="tag">Category 02</div>
+          <h3>Tech & Accessories</h3>
+          <p>Comparison pages for chargers, hubs, audio gear, desks, portable devices, and productivity accessories.</p>
+          <div class="small-meta">Examples: USB-C hubs, monitors, keyboards, desk accessories, and cable management.</div>
+        </div>
+        <div class="panel">
+          <div class="tag">Category 03</div>
+          <h3>Fitness & Wellness</h3>
+          <p>Clear guides for equipment, recovery tools, and routine-friendly products focused on daily use.</p>
+          <div class="small-meta">Examples: mats, rollers, posture gear, hydration tools, and simple recovery equipment.</div>
+        </div>
+      </div>
+    </section>
 
-if __name__ == "__main__":
-    build()
+    <section class="card section" id="method">
+      <h2>Method and editorial criteria</h2>
+      <p class="sub">
+        A credible review site benefits from visible criteria. Readers may not inspect every detail, but they notice whether the page feels grounded in a method or just in marketing language.
+      </p>
+      <div class="grid-2">
+        <div class="panel">
+          <h3>What gets evaluated</h3>
+          <ul class="list">
+            <li><span class="bullet"></span><span><strong>Functionality:</strong> what the product actually does and whether it solves the intended problem.</span></li>
+            <li><span class="bullet"></span><span><strong>Ease of use:</strong> how simple it is to set up, operate, and maintain over time.</span></li>
+            <li><span class="bullet"></span><span><strong>Value:</strong> the balance between price, durability, features, and support.</span></li>
+            <li><span class="bullet"></span><span><strong>Clarity:</strong> whether the recommendation is easy to understand and backed by specific reasons.</span></li>
+          </ul>
+        </div>
+        <div class="panel">
+          <h3>How recommendations are presented</h3>
+          <ul class="list">
+            <li><span class="bullet"></span><span><strong>Best overall:</strong> the most balanced option for most readers.</span></li>
+            <li><span class="bullet"></span><span><strong>Best budget:</strong> the strongest lower-cost choice with acceptable compromises.</span></li>
+            <li><span class="bullet"></span><span><strong>Best premium:</strong> a higher-end option for readers who want more features or better materials.</span></li>
+            <li><span class="bullet"></span><span><strong>Best for specific use:</strong> a product suited to a narrower scenario or need.</span></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="card section" id="editorial">
+      <h2>Editorial standards</h2>
+      <p class="sub">
+        This section adds the kind of detail serious sites often include. It signals process, consistency, and restraint rather than random affiliate placement.
+      </p>
+      <div class="grid-3">
+        <div class="panel">
+          <div class="tag">Standard 01</div>
+          <h3>Original writing</h3>
+          <p>All copy should be written in a human tone, with specific language and no filler-heavy repetition.</p>
+        </div>
+        <div class="panel">
+          <div class="tag">Standard 02</div>
+          <h3>Consistent updates</h3>
+          <p>When a product changes, the content should change with it. Model updates and availability shifts matter.</p>
+        </div>
+        <div class="panel">
+          <div class="tag">Standard 03</div>
+          <h3>Useful context</h3>
+          <p>Each recommendation should explain not only what is recommended, but why it fits a particular reader.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="card section">
+      <h2>Example comparison layout</h2>
+      <p class="sub">
+        This is the kind of comparison block that makes a page feel like it actually contains editorial work. It can be reused across pages or replaced with real product names later.
+      </p>
+      <table class="compare">
+        <thead>
+          <tr>
+            <th>Option</th>
+            <th>Strengths</th>
+            <th>Tradeoffs</th>
+            <th>Best for</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Editor’s Pick</strong></td>
+            <td><span class="badge-good">Balanced</span> Great mix of features, usability, and value.</td>
+            <td>May not be the cheapest choice.</td>
+            <td>Most readers who want one dependable recommendation.</td>
+          </tr>
+          <tr>
+            <td><strong>Budget Choice</strong></td>
+            <td><span class="badge-neutral">Affordable</span> Lower entry cost and easy decision-making.</td>
+            <td>May sacrifice premium materials or advanced features.</td>
+            <td>Price-sensitive buyers and first-time users.</td>
+          </tr>
+          <tr>
+            <td><strong>Premium Choice</strong></td>
+            <td><span class="badge-warn">Feature-rich</span> Higher-end experience and stronger finish.</td>
+            <td>Costs more and may exceed what casual users need.</td>
+            <td>Readers who want maximum convenience or refinement.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card section">
+      <h2>Recent update notes</h2>
+      <p class="sub">
+        A visible update history makes the page feel maintained. Even if the notes are brief, they communicate that the site is actively cared for.
+      </p>
+      <div class="timeline">
+        <div class="timeline-item">
+          <div><strong>2026-05-09</strong><span>Today’s build</span></div>
+          <div>Expanded content sections, added editorial standards, built comparison layouts, and improved the trust framework.</div>
+        </div>
+        <div class="timeline-item">
+          <div><strong>2026-05-08</strong><span>Content pass</span></div>
+          <div>Refined the homepage hierarchy, tightened copy, and added a stronger disclosure block with clearer framing.</div>
+        </div>
+        <div class="timeline-item">
+          <div><strong>2026-05-07</strong><span>Structure pass</span></div>
+          <div>Reviewed navigation, section pacing, and responsive behavior to make the page feel more complete on mobile.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card section">
+      <h2>Sample article inventory</h2>
+      <p class="sub">
+        One-page sites feel more established when the homepage hints at a wider content library. These titles are placeholders for future posts and category pages.
+      </p>
+      <div class="grid-4">
+        <div class="panel">
+          <div class="tag">Guide</div>
+          <h3>How to Choose a Reliable Everyday Product</h3>
+          <p>Explains the basics of comparing materials, durability, convenience, and real-world value.</p>
+        </div>
+        <div class="panel">
+          <div class="tag">List</div>
+          <h3>Best Options for Small Spaces</h3>
+          <p>Focuses on compact, flexible products that are easy to store and easy to live with.</p>
+        </div>
+        <div class="panel">
+          <div class="tag">Comparison</div>
+          <h3>Premium vs Budget: What Really Matters</h3>
+          <p>Breaks down where extra cost helps and where it does not meaningfully change the experience.</p>
+        </div>
+        <div class="panel">
+          <div class="tag">Advice</div>
+          <h3>What to Check Before You Buy</h3>
+          <p>Quick pre-purchase checklist covering features, compatibility, support, and return policy.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="card section">
+      <h2>What a strong page includes</h2>
+      <p class="sub">
+        A serious review site does not look empty. It gives people enough information to trust the recommendation and move forward.
+      </p>
+      <ul class="list">
+        <li><span class="bullet"></span><span><strong>Clear editorial identity:</strong> one consistent brand, tone, and visual style across the page.</span></li>
+        <li><span class="bullet"></span><span><strong>Useful content depth:</strong> not just slogans, but explanations, criteria, and practical takeaways.</span></li>
+        <li><span class="bullet"></span><span><strong>Disclosure language:</strong> honest affiliate disclosure and no misleading promises.</span></li>
+        <li><span class="bullet"></span><span><strong>Contact and policy pages:</strong> privacy policy, terms, and a way to reach the site owner.</span></li>
+        <li><span class="bullet"></span><span><strong>Original copy:</strong> natural English that sounds written by a person, not machine-generated filler.</span></li>
+        <li><span class="bullet"></span><span><strong>Internal depth:</strong> supporting sections that show the site can grow into a larger information hub.</span></li>
+      </ul>
+    </section>
+
+    <section class="card section" id="disclosure">
+      <h2>Affiliate disclosure</h2>
+      <p class="sub disclosure">
+        Some links on this website may be affiliate links. If you click a link and make a purchase, this site may earn a commission at no additional cost to you. Recommendations are based on editorial judgment, research, and relevance to the topic.
+      </p>
+      <div class="grid-2">
+        <div class="panel">
+          <h3>Editorial independence</h3>
+          <p>Affiliate relationships do not control the overall direction of the site. Readers should be able to understand how recommendations are selected.</p>
+        </div>
+        <div class="panel">
+          <h3>Accuracy note</h3>
+          <p>Product details, pricing, and availability can change. Always verify final information on the merchant’s website before purchasing.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="card section">
+      <h2>Frequently asked questions</h2>
+      <p class="sub">FAQ blocks help a homepage feel complete and give visitors quick answers without making the page feel bloated.</p>
+      <div class="faq">
+        <div class="faq-item">
+          <h3>Is this one page enough?</h3>
+          <p>For a first impression, yes. A strong homepage can look credible when the structure is clean and the copy feels complete.</p>
+        </div>
+        <div class="faq-item">
+          <h3>Should every site use this exact layout?</h3>
+          <p>No. It is a strong baseline, but the niche, brand voice, and target audience should shape the final version.</p>
+        </div>
+        <div class="faq-item">
+          <h3>Can this be used for a real affiliate site?</h3>
+          <p>Yes, as a foundation. Add real content, real policies, real contact details, and genuine niche expertise before publishing.</p>
+        </div>
+        <div class="faq-item">
+          <h3>Does a longer page help?</h3>
+          <p>Usually, yes, when the length is used to add useful structure, not just filler. Completeness matters more than word count alone.</p>
+        </div>
+        <div class="faq-item">
+          <h3>What makes a site feel legitimate?</h3>
+          <p>Consistent branding, real navigation, clear disclosures, specific copy, and evidence that the site will be maintained over time.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="card section" id="contact">
+      <h2>Contact</h2>
+      <p class="sub">Use real contact information here when you publish the site. A public contact point is one of the easiest trust signals to add.</p>
+      <div class="grid-2">
+        <div class="panel">
+          <h3>Email</h3>
+          <p>hello@clearchoicereview.com</p>
+        </div>
+        <div class="panel">
+          <h3>Location</h3>
+          <p>United States</p>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        <div class="mini-links">
+          <a href="#about">About</a>
+          <a href="#process">Review Process</a>
+          <a href="#categories">Categories</a>
+          <a href="#method">Method</a>
+          <a href="#editorial">Editorial</a>
+          <a href="#disclosure">Affiliate Disclosure</a>
+          <a href="#contact">Contact</a>
+        </div>
+        <div>
+          © 2026 ClearChoice Review. All rights reserved. This template is for legitimate editorial and affiliate use.
+        </div>
+      </div>
+    </footer>
+  </main>
+</body>
+</html>
